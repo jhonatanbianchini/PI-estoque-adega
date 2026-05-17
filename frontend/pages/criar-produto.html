@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<title>Criar Produto</title>
+<link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+
+<div class="topbar">
+
+<button onclick="window.location.href='estoque.html'">
+Estoque
+</button>
+
+</div>
+
+<div class="container">
+
+<div class="card">
+
+<h2>CRIAR PRODUTO</h2>
+
+<input type="text" id="produto" placeholder="Produto">
+
+<input type="number" id="quantidade" placeholder="Quantidade">
+
+<input type="date" id="validade">
+
+<button onclick="criarProduto()">
+Criar
+</button>
+
+</div>
+
+</div>
+
+<script src="../js/api.js"></script>
+<script src="../js/criar-produto.js"></script>
+
+</body>
+</html>

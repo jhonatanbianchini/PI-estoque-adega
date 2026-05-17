@@ -1,0 +1,1 @@
+const API = "https://estoque-api.onrender.com";

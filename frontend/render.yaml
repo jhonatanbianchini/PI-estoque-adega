@@ -1,0 +1,6 @@
+services:
+  - type: web
+    name: estoque-frontend
+    env: static
+    buildCommand: ""
+    staticPublishPath: .
