@@ -1,5 +1,6 @@
 const path = require("path");
-const sqlite3 = require("sqlite3").verbose();
+const fs = require("fs");
+const initSqlJs = require("sql.js");
 
 const isProduction = process.env.NODE_ENV === "production";
 
@@ -11,28 +12,62 @@ if (isProduction) {
   });
   module.exports = pool;
 } else {
+  let db = null;
   const dbPath = path.join(__dirname, "..", "data", "dev.db");
-  const db = new sqlite3.Database(dbPath);
-
+  
   const pool = {
-    query: (text, params = []) => {
-      const converted = text.replace(/\$([0-9]+)/g, "?");
-      return new Promise((resolve, reject) => {
-        const isSelect = /^\s*select/i.test(text.trim());
-        if (isSelect) {
-          db.all(converted, params, (err, rows) => {
-            if (err) reject(err);
-            else resolve({ rows: rows || [] });
-          });
-        } else {
-          db.run(converted, params, function(err) {
-            if (err) reject(err);
-            else resolve({ rows: [], rowCount: this.changes });
-          });
-        }
-      });
+    init: async () => {
+      const SQL = await initSqlJs();
+      const dbDir = path.dirname(dbPath);
+      if (!fs.existsSync(dbDir)) {
+        fs.mkdirSync(dbDir, { recursive: true });
+      }
+
+      if (fs.existsSync(dbPath)) {
+        const buffer = fs.readFileSync(dbPath);
+        db = new SQL.Database(buffer);
+      } else {
+        db = new SQL.Database();
+      }
     },
-    end: () => new Promise((resolve) => db.close(resolve))
+
+    query: async (text, params = []) => {
+      if (!db) await pool.init();
+
+      // Convert $1, $2, etc. to ? for sql.js
+      let converted = text;
+      params.forEach((_, i) => {
+        converted = converted.replace(`$${i + 1}`, "?");
+      });
+
+      const isSelect = /^\s*select/i.test(text.trim());
+      try {
+        if (isSelect) {
+          const result = db.exec(converted, params);
+          const rows = result.length > 0 ? result[0].values.map((row) => {
+            const columns = result[0].columns;
+            const obj = {};
+            columns.forEach((col, idx) => {
+              obj[col] = row[idx];
+            });
+            return obj;
+          }) : [];
+          return { rows };
+        } else {
+          db.run(converted, params);
+          fs.writeFileSync(dbPath, Buffer.from(db.export()));
+          return { rows: [], rowCount: db.getRowsModified() };
+        }
+      } catch (err) {
+        console.error("SQL Error:", err, "Query:", converted, "Params:", params);
+        throw err;
+      }
+    },
+
+    end: () => {
+      if (db) db.close();
+      return Promise.resolve();
+    }
   };
 
   module.exports = pool;

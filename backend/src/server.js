@@ -4,10 +4,13 @@ const app = require("./app");
 const pool = require("./config/db");
 
 const PORT = process.env.PORT || 3000;
+const isProduction = process.env.NODE_ENV === "production";
+
 async function startServer() {
   try {
-
-  const isProduction = process.env.NODE_ENV === "production";
+    if (!isProduction && pool.init) {
+      await pool.init();
+    }
 
     if (isProduction) {
       await pool.query(`
